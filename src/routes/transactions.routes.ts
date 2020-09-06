@@ -2,17 +2,24 @@ import { Router } from 'express';
 
 import TransactionsRepository from '../repositories/TransactionsRepository';
 import CreateTransactionService from '../services/CreateTransactionService';
-// import DeleteTransactionService from '../services/DeleteTransactionService';
-// import ImportTransactionsService from '../services/ImportTransactionsService'
 import CategoriesRepository from '../repositories/CategoriesRepository';
 import { getCustomRepository } from 'typeorm';
+import DeleteTransactionService from '../services/DeleteTransactionService';
+import ImportTransactionsService from '../services/ImportTransactionsService';
+import multer from 'multer'
+import uploadConfig from '../config/upload'
 const transactionsRouter = Router();
+
+const upload = multer(uploadConfig)
 
 transactionsRouter.get('/', async (request, response) => {
   const transactionsRepository = getCustomRepository(TransactionsRepository);
-  const list = await transactionsRepository.find();
+  const transactions = await transactionsRepository.find();
+  const balance = await transactionsRepository.getBalance();
 
-  return response.json({ Transactions: list });
+  const AllTransactions = { transactions, balance }
+
+  return response.json(AllTransactions);
 });
 
 transactionsRouter.post('/', async (request, response) => {
@@ -22,8 +29,6 @@ transactionsRouter.post('/', async (request, response) => {
   const CategoriesExists = await categoriesRepository.findOne({
     title: category,
   });
-
-  console.log(CategoriesExists);
 
   if (!CategoriesExists) {
     const newCategory = categoriesRepository.create({ title: category });
@@ -43,12 +48,26 @@ transactionsRouter.post('/', async (request, response) => {
   return response.json(transaction);
 });
 
-// transactionsRouter.delete('/:id', async (request, response) => {
-//   // TODO
-// });
+transactionsRouter.delete('/:id', async (request, response) => {
+  const { id } = request.params;
 
-// transactionsRouter.post('/import', async (request, response) => {
-//   // TODO
+  const deleteTransaction = new DeleteTransactionService()
+
+  await deleteTransaction.execute(id)
+
+
+  return response.status(204).send()
+});
+
+// transactionsRouter.post('/import', upload.single('file') , async (request, response) => {
+//   const importTransactions = new ImportTransactionsService();
+
+//   const transactions = await importTransactions.execute(request.file.path)
+
+
+//   return response.json(transactions)
+
+
 // });
 
 export default transactionsRouter;
